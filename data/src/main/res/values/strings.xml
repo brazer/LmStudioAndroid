@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="incorrect_request">Incorrect request!</string>
+    <string name="server_error">Server error!</string>
+    <string name="too_much_load">Too much load at this time, try again later!</string>
+    <string name="something_went_wrong">Something went wrong! Please try again.</string>
+    <string name="server_unreachable">Server is unreachable!</string>
+    <string name="server_timeout">Too much time server was processing the request.</string>
+</resources>

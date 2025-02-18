@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name" translatable="false">LocalMind</string>
+    <string name="save">Save</string>
+    <string name="http_192_168_0_105_1234" translatable="false">http://192.168.0.105:1234</string>
+    <string name="no_model_was_loaded">No model was loaded.</string>
+    <string name="retry">Retry</string>
+    <string name="select_a_model">Select a model:</string>
+    <string name="apply">Apply</string>
+    <string name="something_went_wrong">Something went wrong.</string>
+    <string name="server_url">Server URL</string>
+    <string name="system_prompt">System prompt</string>
+    <string name="model">Model: %1$s</string>
+    <string name="submit">Submit</string>
+    <string name="role_model">role: %1$s, model: %2$s</string>
+    <string name="chat">Chat</string>
+    <string name="preferences">Preferences</string>
+</resources>

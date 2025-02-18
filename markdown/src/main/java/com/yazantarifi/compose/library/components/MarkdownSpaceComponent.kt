@@ -1,0 +1,3 @@
+package com.yazantarifi.compose.library.components
+
+class MarkdownSpaceComponent: MarkdownComponent
