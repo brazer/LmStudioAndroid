@@ -412,6 +412,17 @@
           <option name="screenY" value="2400" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+          <option name="api" value="34" />
+          <option name="brand" value="samsung" />
+          <option name="codename" value="t2q" />
+          <option name="id" value="t2q" />
+          <option name="manufacturer" value="Samsung" />
+          <option name="name" value="Galaxy S21 Plus" />
+          <option name="screenDensity" value="394" />
+          <option name="screenX" value="1080" />
+          <option name="screenY" value="2400" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
           <option name="api" value="33" />
           <option name="brand" value="google" />
           <option name="codename" value="tangorpro" />

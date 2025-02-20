@@ -25,13 +25,15 @@ import com.salanevich.lmstudioandroid.ui.theme.LmStudioAndroidTheme
 fun InputFieldWithButton(
     modifier: Modifier = Modifier,
     buttonText: String,
+    buttonEnabled: Boolean = true,
     value: String = "",
     placeholder: String = "",
     errorMessage: String? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
     reset: Boolean = false,
     action: (String) -> Unit
 ) {
-    var text by remember { mutableStateOf(value) }
+    var text by remember(value) { mutableStateOf(value) }
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.Top
@@ -48,6 +50,7 @@ fun InputFieldWithButton(
                 .focusRequester(focusRequester),
             placeholder = { Text(text = placeholder, color = Color.Gray) },
             value = text,
+            trailingIcon = trailingIcon,
             isError = errorMessage != null,
             supportingText = supportingText,
             onValueChange = { text = it }
@@ -61,7 +64,7 @@ fun InputFieldWithButton(
                     focusManager.clearFocus()
                 }
             },
-            enabled = text.isNotEmpty()
+            enabled = text.isNotEmpty() && buttonEnabled
         ) {
             Text(text = buttonText)
         }
