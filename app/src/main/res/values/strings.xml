@@ -14,4 +14,5 @@
     <string name="role_model">role: %1$s, model: %2$s</string>
     <string name="chat">Chat</string>
     <string name="preferences">Preferences</string>
+    <string name="clear">Clear</string>
 </resources>
