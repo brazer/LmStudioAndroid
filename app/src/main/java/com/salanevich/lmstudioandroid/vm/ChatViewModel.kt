@@ -42,7 +42,12 @@ class ChatViewModel @Inject constructor(
             ChatIntent.LoadModels -> loadModels()
             is ChatIntent.GoToPreferences -> navigateToPreferences()
             ChatIntent.RequestModelSelection -> requestModelSelection()
+            ChatIntent.ClearChat -> clearChat()
         }
+    }
+
+    private fun clearChat() = intent {
+        reduce { state.copy(chat = null) }
     }
 
     private fun requestModelSelection() = intent {
@@ -143,6 +148,7 @@ sealed interface ChatIntent {
     data object LoadModels: ChatIntent
     data object GoToPreferences: ChatIntent
     data object RequestModelSelection : ChatIntent
+    data object ClearChat : ChatIntent
 }
 
 data class ChatState(

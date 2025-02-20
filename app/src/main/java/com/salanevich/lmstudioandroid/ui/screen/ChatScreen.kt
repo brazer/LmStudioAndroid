@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -82,7 +83,8 @@ fun ChatScreen(modifier: Modifier = Modifier, navigateToPreferences: () -> Unit)
         selectionModelAction = { vm.reduce(ChatIntent.SelectModel(it))},
         reloadModelsAction = { vm.reduce(ChatIntent.LoadModels) },
         goToPreferencesAction = { vm.reduce(ChatIntent.GoToPreferences) },
-        requestModelSelectionAction = { vm.reduce(ChatIntent.RequestModelSelection) }
+        requestModelSelectionAction = { vm.reduce(ChatIntent.RequestModelSelection) },
+        clearChatAction = { vm.reduce(ChatIntent.ClearChat) }
     )
 }
 
@@ -96,9 +98,16 @@ private fun ChatScreen(
     reloadModelsAction: () -> Unit,
     goToPreferencesAction: () -> Unit,
     requestModelSelectionAction: () -> Unit,
+    clearChatAction: () -> Unit,
 ) {
     Scaffold(
-        topBar = { Toolbar(goToPreferencesAction = goToPreferencesAction,) }
+        topBar = {
+            Toolbar(
+                state = state,
+                goToPreferencesAction = goToPreferencesAction,
+                clearChatAction = clearChatAction
+            )
+        }
     ) { padding ->
         Box(
             modifier = modifier
@@ -140,7 +149,11 @@ private fun ChatScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Toolbar(goToPreferencesAction: () -> Unit,) {
+private fun Toolbar(
+    state: State<ChatState>,
+    goToPreferencesAction: () -> Unit,
+    clearChatAction: () -> Unit,
+) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -148,6 +161,12 @@ private fun Toolbar(goToPreferencesAction: () -> Unit,) {
         ),
         title = { Text(text = stringResource(R.string.chat)) },
         actions = {
+            if (state.value.chat != null) {
+                Button(onClick = clearChatAction) {
+                    Text(text = stringResource(R.string.clear))
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
             IconButton(
                 modifier = Modifier
                     .size(24.dp)
@@ -326,7 +345,8 @@ private fun ChatScreenErrorPreview() {
             selectionModelAction = {},
             reloadModelsAction = {},
             goToPreferencesAction = {},
-            requestModelSelectionAction = {}
+            requestModelSelectionAction = {},
+            clearChatAction = {}
         )
     }
 }
@@ -350,7 +370,8 @@ private fun ChatScreenModelsPreview() {
             selectionModelAction = {},
             reloadModelsAction = {},
             goToPreferencesAction = {},
-            requestModelSelectionAction = {}
+            requestModelSelectionAction = {},
+            clearChatAction = {}
         )
     }
 }
@@ -381,7 +402,8 @@ private fun ChatScreenPreview() {
             selectionModelAction = {},
             reloadModelsAction = {},
             goToPreferencesAction = {},
-            requestModelSelectionAction = {}
+            requestModelSelectionAction = {},
+            clearChatAction = {}
         )
     }
 }
