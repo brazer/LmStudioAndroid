@@ -15,4 +15,5 @@
     <string name="chat">Chat</string>
     <string name="preferences">Preferences</string>
     <string name="clear">Clear</string>
+    <string name="the_permission_is_not_granted">The permission is not granted.</string>
 </resources>
