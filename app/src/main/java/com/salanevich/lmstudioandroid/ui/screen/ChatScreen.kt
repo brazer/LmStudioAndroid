@@ -139,12 +139,19 @@ private fun ChatScreen(
                     errorMessage = error,
                     action = saveUrlAction
                 )
-            } else if (state.value.models.size > 1 && state.value.selectedModel == null) {
-                ModelSelection(models = state.value.models.map { it.name }, applyButton = {
-                    Button(onClick = { selectionModelAction(it) }) {
-                        Text(text = stringResource(R.string.apply))
+            } else if (state.value.selectedModel == null) {
+                ModelSelection(models = state.value.models.map { it.name },
+                    applyButton = {
+                        Button(onClick = { selectionModelAction(it) }) {
+                            Text(text = stringResource(R.string.apply))
+                        }
+                    },
+                    reloadButton = {
+                        Button(onClick = reloadModelsAction) {
+                            Text(text = stringResource(R.string.reload))
+                        }
                     }
-                })
+                )
             } else if (state.value.models.isEmpty()) {
                 ShowWarningWithAction(action = reloadModelsAction)
             } else {
@@ -272,9 +279,7 @@ private fun ShowChat(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    if (state.value.models.size > 1) {
-                        requestModelSelectionAction()
-                    }
+                    requestModelSelectionAction()
                 },
             text = stringResource(R.string.model, state.value.selectedModel ?: ""),
             style = MaterialTheme.typography.labelMedium

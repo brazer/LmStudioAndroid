@@ -3,11 +3,14 @@ package com.salanevich.lmstudioandroid.ui.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -27,7 +30,7 @@ fun ModelSelection(
     modifier: Modifier = Modifier,
     models: List<String>,
     applyButton: @Composable (String) -> Unit = {},
-    selectedModelAction: (String) -> Unit = {}
+    reloadButton: @Composable () -> Unit = {},
 ) {
     Column(
         modifier = modifier.wrapContentSize(),
@@ -50,10 +53,7 @@ fun ModelSelection(
                         .padding(start = 16.dp)
                         .selectable(
                             selected = (text == selectedOption),
-                            onClick = {
-                                onOptionSelected(text)
-                                selectedModelAction(text)
-                            },
+                            onClick = { onOptionSelected(text) },
                             role = androidx.compose.ui.semantics.Role.RadioButton
                         )
                         .padding(horizontal = 16.dp),
@@ -72,7 +72,11 @@ fun ModelSelection(
                 }
             }
         }
-        applyButton(selectedOption)
+        Row {
+            applyButton(selectedOption)
+            Spacer(modifier = Modifier.width(4.dp))
+            reloadButton()
+        }
     }
 }
 
@@ -81,7 +85,17 @@ fun ModelSelection(
 private fun ModelSelectionPreview() {
     LmStudioAndroidTheme {
         ModelSelection(
-            models = listOf("model1", "model2", "model3")
+            models = listOf("model1", "model2", "model3"),
+            applyButton = {
+                Button(onClick = {}) {
+                    Text(text = "Apply")
+                }
+            },
+            reloadButton = {
+                Button(onClick = {}) {
+                    Text(text = "Reload")
+                }
+            }
         )
     }
 }
