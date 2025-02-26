@@ -110,9 +110,7 @@ class ChatViewModel @Inject constructor(
         reduce { state.copy(loading = true) }
         try {
             val models = getModelsUseCase()
-            if (models.size == 1) {
-                reduce { state.copy(models = models, fatalError = null, loading = false, selectedModel = models.first().name) }
-            } else reduce { state.copy(models = models, fatalError = null, loading = false) }
+            reduce { state.copy(models = models, fatalError = null, loading = false) }
         } catch (e: NetworkException) {
             Log.e("ChatViewModel", "loadModels: ${e.message}")
             preferencesInteractor.getBaseUrl().collect { url ->
