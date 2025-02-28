@@ -1,6 +1,9 @@
 package com.salanevich.lmstudioandroid.ui.screen
 
+import android.Manifest
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -36,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -74,6 +79,11 @@ fun ChatScreen(modifier: Modifier = Modifier, navigateToPreferences: () -> Unit)
         }
     }
     val state = vm.collectAsState()
+    val permissionFlow = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            vm.reduce(ChatIntent.OnMicLicked)
+        } else Toast.makeText(context, R.string.the_permission_is_not_granted, Toast.LENGTH_LONG).show()
+    }
     ChatScreen(
         modifier = modifier,
         state = state,
@@ -82,7 +92,9 @@ fun ChatScreen(modifier: Modifier = Modifier, navigateToPreferences: () -> Unit)
         selectionModelAction = { vm.reduce(ChatIntent.SelectModel(it))},
         reloadModelsAction = { vm.reduce(ChatIntent.LoadModels) },
         goToPreferencesAction = { vm.reduce(ChatIntent.GoToPreferences) },
-        requestModelSelectionAction = { vm.reduce(ChatIntent.RequestModelSelection) }
+        requestModelSelectionAction = { vm.reduce(ChatIntent.RequestModelSelection) },
+        clearChatAction = { vm.reduce(ChatIntent.ClearChat) },
+        onMicClick = { permissionFlow.launch(Manifest.permission.RECORD_AUDIO) }
     )
 }
 
@@ -96,9 +108,17 @@ private fun ChatScreen(
     reloadModelsAction: () -> Unit,
     goToPreferencesAction: () -> Unit,
     requestModelSelectionAction: () -> Unit,
+    clearChatAction: () -> Unit,
+    onMicClick: () -> Unit,
 ) {
     Scaffold(
-        topBar = { Toolbar(goToPreferencesAction = goToPreferencesAction,) }
+        topBar = {
+            Toolbar(
+                state = state,
+                goToPreferencesAction = goToPreferencesAction,
+                clearChatAction = clearChatAction
+            )
+        }
     ) { padding ->
         Box(
             modifier = modifier
@@ -119,12 +139,19 @@ private fun ChatScreen(
                     errorMessage = error,
                     action = saveUrlAction
                 )
-            } else if (state.value.models.size > 1 && state.value.selectedModel == null) {
-                ModelSelection(models = state.value.models.map { it.name }, applyButton = {
-                    Button(onClick = { selectionModelAction(it) }) {
-                        Text(text = stringResource(R.string.apply))
+            } else if (state.value.selectedModel == null) {
+                ModelSelection(models = state.value.models.map { it.name },
+                    applyButton = {
+                        Button(onClick = { selectionModelAction(it) }) {
+                            Text(text = stringResource(R.string.apply))
+                        }
+                    },
+                    reloadButton = {
+                        Button(onClick = reloadModelsAction) {
+                            Text(text = stringResource(R.string.reload))
+                        }
                     }
-                })
+                )
             } else if (state.value.models.isEmpty()) {
                 ShowWarningWithAction(action = reloadModelsAction)
             } else {
@@ -132,6 +159,7 @@ private fun ChatScreen(
                     state = state,
                     messageAction = messageAction,
                     requestModelSelectionAction = requestModelSelectionAction,
+                    onMicClick = onMicClick
                 )
             }
         }
@@ -140,7 +168,11 @@ private fun ChatScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Toolbar(goToPreferencesAction: () -> Unit,) {
+private fun Toolbar(
+    state: State<ChatState>,
+    goToPreferencesAction: () -> Unit,
+    clearChatAction: () -> Unit,
+) {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -148,6 +180,12 @@ private fun Toolbar(goToPreferencesAction: () -> Unit,) {
         ),
         title = { Text(text = stringResource(R.string.chat)) },
         actions = {
+            if (state.value.chat != null) {
+                Button(onClick = clearChatAction) {
+                    Text(text = stringResource(R.string.clear))
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
             IconButton(
                 modifier = Modifier
                     .size(24.dp)
@@ -180,6 +218,7 @@ private fun ShowChat(
     state: State<ChatState>,
     messageAction: (String) -> Unit,
     requestModelSelectionAction: () -> Unit,
+    onMicClick: () -> Unit,
 ) {
     Column(modifier = modifier
         .fillMaxSize()
@@ -195,7 +234,7 @@ private fun ShowChat(
         ) {
             items(messages.size, key = { messages[it].message }) { i ->
                 val message = messages[i]
-                if (message.role != Role.SYSTEM.value) {
+                if (message.role != Role.SYSTEM.value && message.message.isNotEmpty()) {
                     ChatItem(message = message.message, role = message.role, model = message.model)
                 }
             }
@@ -221,15 +260,26 @@ private fun ShowChat(
         InputFieldWithButton(
             buttonText = stringResource(R.string.submit),
             reset = true,
+            trailingIcon = {
+                IconButton(onClick = onMicClick) {
+                    Icon(
+                        painter = if (state.value.isMicOn)
+                            painterResource(id = R.drawable.ic_mic)
+                        else painterResource(id = R.drawable.ic_mic_none),
+                        contentDescription = "microphone",
+                        tint = MaterialTheme.colorScheme.surfaceTint
+                    )
+                }
+            },
+            value = state.value.recognizedText,
+            buttonEnabled = state.value.isMicOn.not(),
             action = messageAction
         )
         Text(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    if (state.value.models.size > 1) {
-                        requestModelSelectionAction()
-                    }
+                    requestModelSelectionAction()
                 },
             text = stringResource(R.string.model, state.value.selectedModel ?: ""),
             style = MaterialTheme.typography.labelMedium
@@ -326,7 +376,9 @@ private fun ChatScreenErrorPreview() {
             selectionModelAction = {},
             reloadModelsAction = {},
             goToPreferencesAction = {},
-            requestModelSelectionAction = {}
+            requestModelSelectionAction = {},
+            clearChatAction = {},
+            onMicClick = {}
         )
     }
 }
@@ -350,7 +402,9 @@ private fun ChatScreenModelsPreview() {
             selectionModelAction = {},
             reloadModelsAction = {},
             goToPreferencesAction = {},
-            requestModelSelectionAction = {}
+            requestModelSelectionAction = {},
+            clearChatAction = {},
+            onMicClick = {}
         )
     }
 }
@@ -381,7 +435,9 @@ private fun ChatScreenPreview() {
             selectionModelAction = {},
             reloadModelsAction = {},
             goToPreferencesAction = {},
-            requestModelSelectionAction = {}
+            requestModelSelectionAction = {},
+            clearChatAction = {},
+            onMicClick = {}
         )
     }
 }

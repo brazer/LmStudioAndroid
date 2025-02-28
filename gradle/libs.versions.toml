@@ -20,6 +20,7 @@ coroutines = "1.10.1"
 jetbrainsKotlinJvm = "1.9.0"
 hilt = "2.51.1"
 ksp = "2.0.0-1.0.24"
+mockk = "1.13.16"
 navigationCompose = "2.8.7"
 hiltNavigationCompose = "1.2.0"
 orbit = "9.0.0"
@@ -58,6 +59,7 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 ktor-client-content = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 orbit-compose = { module = "org.orbit-mvi:orbit-compose", version.ref = "orbit" }
 orbit-test = { module = "org.orbit-mvi:orbit-test", version.ref = "orbit" }
 orbit-viewmodel = { module = "org.orbit-mvi:orbit-viewmodel", version.ref = "orbit" }

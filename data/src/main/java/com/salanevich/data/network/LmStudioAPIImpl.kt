@@ -1,12 +1,12 @@
 package com.salanevich.data.network
 
+import android.util.Log
 import com.salanevich.data.R
 import com.salanevich.data.network.body.LmModelsResponse
 import com.salanevich.data.network.body.ChatResponse
 import com.salanevich.domain.model.Chat
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.ANDROID
@@ -20,7 +20,6 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
-import java.net.SocketTimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,8 +48,9 @@ class LmStudioAPIImpl @Inject constructor(): LmStudioAPI, BaseUrlSetter {
     override suspend fun getLmModels(): NetworkResult<LmModelsResponse> {
         return try {
             client.get("$baseUrl/v1/models").toResult()
-        } catch (e: ConnectTimeoutException) {
-            NetworkResult.Error(NetworkException(e, R.string.server_unreachable))
+        } catch (e: Exception) {
+            Log.e("LmStudioAPIImpl", "getLmModels", e)
+            NetworkResult.Error(NetworkException(e, R.string.network_error))
         }
     }
 
@@ -62,10 +62,9 @@ class LmStudioAPIImpl @Inject constructor(): LmStudioAPI, BaseUrlSetter {
                 contentType(ContentType.Application.Json)
                 setBody(chat.map(model, maxTokens, temperature, stream))
             }.toResult()
-        } catch (e: ConnectTimeoutException) {
-            NetworkResult.Error(NetworkException(e, R.string.server_unreachable))
-        } catch (e: SocketTimeoutException) {
-            NetworkResult.Error(NetworkException(e, R.string.server_timeout))
+        } catch (e: Exception) {
+            Log.e("LmStudioAPIImpl", "getMessage", e)
+            NetworkResult.Error(NetworkException(e, R.string.network_error))
         }
     }
 

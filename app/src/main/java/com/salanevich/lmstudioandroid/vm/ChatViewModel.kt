@@ -11,9 +11,13 @@ import com.salanevich.domain.model.Chat
 import com.salanevich.domain.usecase.GetModelsUseCase
 import com.salanevich.domain.model.LmModel
 import com.salanevich.domain.model.Message
+import com.salanevich.domain.model.SpeechState
 import com.salanevich.domain.usecase.GetMessageUseCase
+import com.salanevich.domain.usecase.ListenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
@@ -26,6 +30,7 @@ class ChatViewModel @Inject constructor(
     private val getMessageUseCase: GetMessageUseCase,
     private val preferencesInteractor: PreferencesInteractor,
     private val baseUrlSetter: BaseUrlSetter,
+    private val listenUseCase: ListenUseCase,
     @ApplicationContext private val context: Context
 ): ViewModel(), ContainerHost<ChatState, ChatSideEffect> {
 
@@ -42,7 +47,33 @@ class ChatViewModel @Inject constructor(
             ChatIntent.LoadModels -> loadModels()
             is ChatIntent.GoToPreferences -> navigateToPreferences()
             ChatIntent.RequestModelSelection -> requestModelSelection()
+            ChatIntent.ClearChat -> clearChat()
+            ChatIntent.OnMicLicked -> onMicClicked()
         }
+    }
+
+    private fun onMicClicked() = intent {
+        if (!state.isMicOn) {
+            withContext(Dispatchers.Main) {
+                listenUseCase().collect {
+                    when (it) {
+                        SpeechState.Start -> {
+                            reduce { state.copy(isMicOn = true, recognizedText = "Listening...") }
+                        }
+                        is SpeechState.Text -> {
+                            reduce { state.copy(recognizedText = it.value) }
+                        }
+                        SpeechState.End -> {
+                            reduce { state.copy(isMicOn = false) }
+                        }
+                    }
+                }
+            }
+        } else reduce { state.copy(isMicOn = false, recognizedText = "") }
+    }
+
+    private fun clearChat() = intent {
+        reduce { state.copy(chat = null) }
     }
 
     private fun requestModelSelection() = intent {
@@ -79,9 +110,7 @@ class ChatViewModel @Inject constructor(
         reduce { state.copy(loading = true) }
         try {
             val models = getModelsUseCase()
-            if (models.size == 1) {
-                reduce { state.copy(models = models, fatalError = null, loading = false, selectedModel = models.first().name) }
-            } else reduce { state.copy(models = models, fatalError = null, loading = false) }
+            reduce { state.copy(models = models, fatalError = null, loading = false) }
         } catch (e: NetworkException) {
             Log.e("ChatViewModel", "loadModels: ${e.message}")
             preferencesInteractor.getBaseUrl().collect { url ->
@@ -91,6 +120,11 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun getMessage(message: String) = intent {
+        reduce { state.copy(recognizedText = "") }
+        if (state.chat?.messages?.find { it.role == Role.USER.value && it.message == message } != null) {
+            postSideEffect(sideEffect = ChatSideEffect.ShowErrorMessage("You already sent this message"))
+            return@intent
+        }
         val previousMessages = state.chat?.messages?.toMutableList() ?: mutableListOf()
         if (previousMessages.isEmpty()) {
             val systemPrompt = getSystemPrompt()
@@ -120,7 +154,7 @@ class ChatViewModel @Inject constructor(
             reduce { state.copy(loadingOfMessage = false, chat = chat) }
         } catch (e: NetworkException) {
             Log.e("ChatViewModel", "getMessage: ${e.message}")
-            reduce { state.copy(loading = false) }
+            reduce { state.copy(loadingOfMessage = false) }
             postSideEffect(ChatSideEffect.ShowErrorMessage(context.getString(e.stringId)))
         }
     }
@@ -143,6 +177,8 @@ sealed interface ChatIntent {
     data object LoadModels: ChatIntent
     data object GoToPreferences: ChatIntent
     data object RequestModelSelection : ChatIntent
+    data object ClearChat : ChatIntent
+    data object OnMicLicked : ChatIntent
 }
 
 data class ChatState(
@@ -153,6 +189,8 @@ data class ChatState(
     val chat: Chat? = null,
     val fatalError: FatalError? = null,
     val requestUrl: Boolean = false,
+    val isMicOn: Boolean = false,
+    val recognizedText: String = ""
 ) {
     data class FatalError(val message: String, val url: String)
 }
