@@ -17,19 +17,19 @@ import com.salanevich.domain.usecase.ListenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
 import javax.inject.Inject
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val getModelsUseCase: GetModelsUseCase,
     private val getMessageUseCase: GetMessageUseCase,
     private val preferencesInteractor: PreferencesInteractor,
-    private val baseUrlSetter: BaseUrlSetter,
+    private val lmStudioAPIImpl: BaseUrlSetter,
     private val listenUseCase: ListenUseCase,
     @ApplicationContext private val context: Context
 ): ViewModel(), ContainerHost<ChatState, ChatSideEffect> {
@@ -55,16 +55,22 @@ class ChatViewModel @Inject constructor(
     private fun onMicClicked() = intent {
         if (!state.isMicOn) {
             withContext(Dispatchers.Main) {
-                listenUseCase().collect {
+                listenUseCase().collectLatest {
                     when (it) {
+                        SpeechState.Initialization -> {
+                            reduce { state.copy(isMicOn = true, recognizedText = "Initialization...") }
+                        }
                         SpeechState.Start -> {
-                            reduce { state.copy(isMicOn = true, recognizedText = "Listening...") }
+                            reduce { state.copy(isMicOn = true, recognizedText = "Speak") }
+                        }
+                        SpeechState.Speaking -> {
+                            reduce { state.copy(recognizedText = "Listening...") }
+                        }
+                        SpeechState.End -> {
+                            reduce { state.copy(isMicOn = false, recognizedText = "") }
                         }
                         is SpeechState.Text -> {
                             reduce { state.copy(recognizedText = it.value) }
-                        }
-                        SpeechState.End -> {
-                            reduce { state.copy(isMicOn = false) }
                         }
                     }
                 }
@@ -90,19 +96,18 @@ class ChatViewModel @Inject constructor(
 
     private fun putBaseUrl(url: String) = intent {
         preferencesInteractor.putBaseUrl(url)
-        baseUrlSetter.setUrl(url)
+        lmStudioAPIImpl.setUrl(url)
         reduce { state.copy(requestUrl = false) }
         loadModels()
     }
 
     private fun loadBaseUrl() = intent {
-        preferencesInteractor.getBaseUrl().collect { url ->
-            if (url.isEmpty()) {
-                reduce { state.copy(requestUrl = true, loading = false) }
-            } else {
-                baseUrlSetter.setUrl(url)
-                loadModels()
-            }
+        val url = preferencesInteractor.getBaseUrl().first()
+        if (url.isEmpty()) {
+            reduce { state.copy(requestUrl = true, loading = false) }
+        } else {
+            lmStudioAPIImpl.setUrl(url)
+            loadModels()
         }
     }
 
@@ -113,28 +118,24 @@ class ChatViewModel @Inject constructor(
             reduce { state.copy(models = models, fatalError = null, loading = false) }
         } catch (e: NetworkException) {
             Log.e("ChatViewModel", "loadModels: ${e.message}")
-            preferencesInteractor.getBaseUrl().collect { url ->
-                reduce { state.copy(loading = false, fatalError = ChatState.FatalError(context.getString(e.stringId), url)) }
-            }
+            val url = preferencesInteractor.getBaseUrl().first()
+            reduce { state.copy(loading = false, fatalError = ChatState.FatalError(context.getString(e.stringId), url)) }
         }
     }
 
     private fun getMessage(message: String) = intent {
         reduce { state.copy(recognizedText = "") }
-        if (state.chat?.messages?.find { it.role == Role.USER.value && it.message == message } != null) {
-            postSideEffect(sideEffect = ChatSideEffect.ShowErrorMessage("You already sent this message"))
-            return@intent
-        }
         val previousMessages = state.chat?.messages?.toMutableList() ?: mutableListOf()
-        if (previousMessages.isEmpty()) {
-            val systemPrompt = getSystemPrompt()
-            if (systemPrompt.isNotEmpty()) {
+        val oldSystemPrompt = previousMessages.find { it.role == Role.SYSTEM.value } ?: ""
+        val newSystemPrompt = preferencesInteractor.getSystemPrompt().first()
+        if (newSystemPrompt != oldSystemPrompt && newSystemPrompt.isNotEmpty()) {
                 previousMessages.add(Message(
                     model = checkNotNull(state.selectedModel),
                     role = Role.SYSTEM.value,
-                    message = systemPrompt
+                    message = newSystemPrompt
                 ))
-            }
+        } else if (newSystemPrompt.isEmpty()) {
+            previousMessages.removeIf { it.role == Role.SYSTEM.value }
         }
         previousMessages.add(Message(
             model = checkNotNull(state.selectedModel),
@@ -156,14 +157,6 @@ class ChatViewModel @Inject constructor(
             Log.e("ChatViewModel", "getMessage: ${e.message}")
             reduce { state.copy(loadingOfMessage = false) }
             postSideEffect(ChatSideEffect.ShowErrorMessage(context.getString(e.stringId)))
-        }
-    }
-
-    private suspend fun getSystemPrompt(): String = suspendCoroutine { continuation ->
-        intent {
-            preferencesInteractor.getSystemPrompt().collect { text ->
-                continuation.resume(text)
-            }
         }
     }
 

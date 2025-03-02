@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -184,7 +185,7 @@ private fun Toolbar(
                 Button(onClick = clearChatAction) {
                     Text(text = stringResource(R.string.clear))
                 }
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(16.dp))
             }
             IconButton(
                 modifier = Modifier
@@ -232,7 +233,7 @@ private fun ShowChat(
             verticalArrangement = Arrangement.Bottom,
             state = listState
         ) {
-            items(messages.size, key = { messages[it].message }) { i ->
+            items(messages.size) { i ->
                 val message = messages[i]
                 if (message.role != Role.SYSTEM.value && message.message.isNotEmpty()) {
                     ChatItem(message = message.message, role = message.role, model = message.model)
@@ -296,6 +297,10 @@ private fun ChatItem(
 ) {
     Card(
         border = BorderStroke(2.dp, MaterialTheme.colorScheme.primaryContainer),
+        colors = CardDefaults.cardColors(
+            containerColor = if (Role.USER.value == role)
+                MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.secondaryContainer
+        )
     ) {
         Column(
             modifier = modifier

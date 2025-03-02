@@ -1,5 +1,6 @@
 package com.salanevich.data.di
 
+import androidx.lifecycle.LifecycleEventObserver
 import com.salanevich.data.network.LmStudioAPI
 import com.salanevich.data.network.LmStudioAPIImpl
 import com.salanevich.data.preferences.Preferences
@@ -65,6 +66,9 @@ interface BindingModule {
     @Singleton
     @Binds
     fun bindListeningRepository(repository: ListeningRepositoryImpl): ListeningRepository
+    @Singleton
+    @Binds
+    fun bindListeningRepositoryImplAsObserver(repository: ListeningRepositoryImpl): LifecycleEventObserver
     @Singleton
     @Binds
     fun bindListenUseCase(useCase: ListenUseCaseImpl): ListenUseCase
