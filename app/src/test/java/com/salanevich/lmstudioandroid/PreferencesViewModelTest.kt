@@ -1,5 +1,6 @@
 package com.salanevich.lmstudioandroid
 
+import com.salanevich.data.network.BaseUrlSetter
 import com.salanevich.data.usecase.preferences.PreferencesInteractor
 import com.salanevich.domain.usecase.preferences.GetBaseUrlUseCase
 import com.salanevich.domain.usecase.preferences.GetSystemPromptUseCase
@@ -10,6 +11,7 @@ import com.salanevich.lmstudioandroid.vm.PreferencesSideEffect
 import com.salanevich.lmstudioandroid.vm.PreferencesState
 import com.salanevich.lmstudioandroid.vm.PreferencesViewModel
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
@@ -24,15 +26,18 @@ class PreferencesViewModelTest {
     private val getSystemPromptUseCase = mockk<GetSystemPromptUseCase>()
     private val putBaseUrlUseCase = mockk<PutBaseUrlUseCase>()
     private val putSystemPromptUseCase = mockk<PutSystemPromptUseCase>()
+    private val baseUrlSetter = mockk<BaseUrlSetter>()
 
     @Before
     fun setUp() {
         viewModel = PreferencesViewModel(preferencesInteractor = PreferencesInteractor(
-            getBaseUrlUseCase = getBaseUrlUseCase,
-            putBaseUrlUseCase = putBaseUrlUseCase,
-            getSystemPromptUseCase = getSystemPromptUseCase,
-            putSystemPromptUseCase = putSystemPromptUseCase
-        ))
+                getBaseUrlUseCase = getBaseUrlUseCase,
+                putBaseUrlUseCase = putBaseUrlUseCase,
+                getSystemPromptUseCase = getSystemPromptUseCase,
+                putSystemPromptUseCase = putSystemPromptUseCase
+            ),
+            lmStudioAPIImpl = baseUrlSetter
+        )
     }
 
     @Test
@@ -50,6 +55,7 @@ class PreferencesViewModelTest {
     fun `test apply`() = runTest {
         coEvery { putBaseUrlUseCase("url") } returns Unit
         coEvery { putSystemPromptUseCase("prompt") } returns Unit
+        every { baseUrlSetter.setUrl("url") } returns Unit
         viewModel.test(this, PreferencesState()) {
             expectInitialState()
             containerHost.reduce(PreferencesIntent.Apply("url", "prompt"))
