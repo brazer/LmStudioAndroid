@@ -1,9 +1,10 @@
 package com.salanevich.lmstudioandroid.vm
 
 import androidx.lifecycle.ViewModel
+import com.salanevich.data.network.BaseUrlSetter
 import com.salanevich.data.usecase.preferences.PreferencesInteractor
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.zip
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
@@ -12,6 +13,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PreferencesViewModel @Inject constructor(
     private val preferencesInteractor: PreferencesInteractor,
+    private val lmStudioAPIImpl: BaseUrlSetter,
 ) : ViewModel(), ContainerHost<PreferencesState, PreferencesSideEffect> {
 
     override val container = container<PreferencesState, PreferencesSideEffect>(PreferencesState())
@@ -27,10 +29,11 @@ class PreferencesViewModel @Inject constructor(
         reduce { state.copy(isLoading = true) }
         preferencesInteractor.getBaseUrl().zip(preferencesInteractor.getSystemPrompt()) { url, system ->
             reduce { state.copy(url = url, system = system, isLoading = false) }
-        }.collect()
+        }.first()
     }
 
     private fun apply(url: String, system: String) = intent {
+        lmStudioAPIImpl.setUrl(url)
         preferencesInteractor.putBaseUrl(url)
         preferencesInteractor.putSystemPrompt(system)
         postSideEffect(PreferencesSideEffect.GoToChat)

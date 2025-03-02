@@ -48,6 +48,8 @@ class ChatViewModelTest {
 
     @Before
     fun setUp() {
+        mockkStatic(Log::class)
+        every { Log.e(any(), any()) } returns 0
         viewModel = ChatViewModel(
             getModelsUseCase = getModelsUseCase,
             getMessageUseCase = getMessageUseCase,
@@ -57,7 +59,7 @@ class ChatViewModelTest {
                 getSystemPromptUseCase = getSystemPromptUseCase,
                 putSystemPromptUseCase = mockk()
             ),
-            baseUrlSetter = baseUrlSetter,
+            lmStudioAPIImpl = baseUrlSetter,
             listenUseCase = listenUseCase,
             context = context
         )
@@ -86,8 +88,6 @@ class ChatViewModelTest {
         coEvery { getModelsUseCase() } throws NetworkException("Server is unreachable", 0)
         every { context.getString(any()) } returns "Server is unreachable"
         coEvery { getBaseUrlUseCase() } returns flow { emit("") }
-        mockkStatic(Log::class)
-        every { Log.e(any(), any()) } returns 0
         viewModel.test(this, ChatState()) {
             expectInitialState()
             containerHost.reduce(ChatIntent.LoadModels)
@@ -98,10 +98,9 @@ class ChatViewModelTest {
     @Test
     fun `server is unreachable for getting response`() = runTest {
         val chat = Chat(listOf(Message("model", Role.SYSTEM.value, "message1")))
+        coEvery { getSystemPromptUseCase() } returns flow { emit("") }
         coEvery { getMessageUseCase(any(), any()) } throws NetworkException("Server is unreachable", 0)
         every { context.getString(any()) } returns "Server is unreachable"
-        mockkStatic(Log::class)
-        every { Log.e(any(), any()) } returns 0
         val initSate = ChatState(chat = chat, selectedModel = "model")
         viewModel.test(this, initSate) {
             expectInitialState()
@@ -119,7 +118,8 @@ class ChatViewModelTest {
         val message2 = Message("model", Role.USER.value, "message2")
         val message3 = Message("model", Role.ASSISTANT.value, "message3")
         coEvery { getMessageUseCase(any(), any()) } returns message3
-        val chat = Chat(listOf(Message("model", Role.SYSTEM.value, "message1")))
+        coEvery { getSystemPromptUseCase() } returns flow { emit("") }
+        val chat = Chat(emptyList())
         val initSate = ChatState(chat = chat, selectedModel = "model")
         viewModel.test(this, initSate) {
             expectInitialState()
@@ -156,14 +156,28 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `unsuccessful getting response due to the same user message`() = runTest {
-        val userMessage = Message("model", Role.USER.value, "message1")
-        val chat = Chat(listOf(userMessage))
-        val initSate = ChatState(chat = chat, selectedModel = "model")
+    fun `test removing system prompt`() = runTest {
+        val initChat = Chat(listOf(
+            Message("model", Role.SYSTEM.value, "message1"),
+            Message("model", Role.USER.value, "message2"),
+            Message("model", Role.ASSISTANT.value, "message3")
+        ))
+        coEvery { getSystemPromptUseCase() } returns flow { emit("") }
+        coEvery { getMessageUseCase(any(), "model") } returns
+                Message("model", Role.ASSISTANT.value, "message5")
+        val initSate = ChatState(chat = initChat, selectedModel = "model")
         viewModel.test(this, initSate) {
             expectInitialState()
-            containerHost.reduce(ChatIntent.GetResponse("message1"))
-            expectSideEffect(ChatSideEffect.ShowErrorMessage("You already sent this message"))
+            containerHost.reduce(ChatIntent.GetResponse("message4"))
+            val newChat1  = Chat(messages = initChat.messages.toMutableList().apply {
+                removeAt(0)
+                add(Message("model", Role.USER.value, "message4"))
+            })
+            expectState { initSate.copy(loadingOfMessage = true, chat = newChat1) }
+            val newChat2 = Chat(messages = newChat1.messages.toMutableList().apply {
+                add(Message("model", Role.ASSISTANT.value, "message5"))
+            })
+            expectState { initSate.copy(loadingOfMessage = false, chat = newChat2) }
         }
     }
 
@@ -202,18 +216,24 @@ class ChatViewModelTest {
     @Test
     fun `test on mic clicked`() = runTest {
         coEvery { listenUseCase() } returns flow {
+            emit(SpeechState.Initialization)
+            delay(100)
             emit(SpeechState.Start)
             delay(100)
-            emit(SpeechState.Text("message"))
+            emit(SpeechState.Speaking)
             delay(100)
             emit(SpeechState.End)
+            delay(100)
+            emit(SpeechState.Text("message"))
         }
         viewModel.test(this, ChatState()) {
             Dispatchers.setMain(Dispatchers.Unconfined)
             expectInitialState()
             containerHost.reduce(ChatIntent.OnMicLicked)
+            expectState { ChatState(isMicOn = true, recognizedText = "Initialization...") }
+            expectState { ChatState(isMicOn = true, recognizedText = "Speak") }
             expectState { ChatState(isMicOn = true, recognizedText = "Listening...") }
-            expectState { ChatState(isMicOn = true, recognizedText = "message") }
+            expectState { ChatState(isMicOn = false, recognizedText = "") }
             expectState { ChatState(isMicOn = false, recognizedText = "message") }
             Dispatchers.resetMain()
         }
