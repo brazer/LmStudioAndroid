@@ -10,6 +10,7 @@
 * Switching between different loaded models
 * Configure a system prompt for the model in settings
 * Markdown support based on <a href="https://github.com/Yazan98/Markdown-Compose?utm_source=chatgpt.com">Markdown-Compose</a>
+* Voice input
 
 # Requirements
 
