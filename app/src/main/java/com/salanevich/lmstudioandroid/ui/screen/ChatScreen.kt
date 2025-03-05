@@ -140,7 +140,7 @@ private fun ChatScreen(
                     errorMessage = error,
                     action = saveUrlAction
                 )
-            } else if (state.value.selectedModel == null) {
+            } else if (state.value.selectedModel == null && state.value.models.isNotEmpty()) {
                 ModelSelection(models = state.value.models.map { it.name },
                     applyButton = {
                         Button(onClick = { selectionModelAction(it) }) {
