@@ -11,9 +11,9 @@
 # Requirements
 
 * A PC with a well-performance configuration for LLM models.
-* Installed LMStudio.
+* Installed LM Studio.
 * Android Studio with OpenJDK 17.
 * Connect both the mobile phone and the PC to the same local network via Wi-Fi.
 
 # The demo video
-[![Watch the video](./icon_app.webp)](video/Screen_recording_20250305_120412.mp4)
+[![Watch the video](./icon_app.png)](https://youtube.com/shorts/nA5ngnSu6L4?feature=share)
